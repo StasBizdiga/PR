@@ -12,3 +12,4 @@ install:
 # command to run tests
 script: 
   - python Lab1-2/src/test.py
+  

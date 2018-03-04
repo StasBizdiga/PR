@@ -1,147 +1,87 @@
-#parsing libraries
-from ast import literal_eval  
-import xmltodict
-import csv
+# user files
+import utils 
 
 # networking libs
-import http.client, urllib
+import http.client
+import urllib,urllib.request as r
 
-# global result variable
-OUTPUT = {"ID":[],"TYPE":[],"VALUE":[]}
-
-def deserialize(data, type):
-    if (type == "JSON"):
-        return literal_eval(data.decode("utf-8"))
-
-    elif (type == "XML"):
-        return xmltodict.parse(data.decode("utf-8"))["device"]
-
-    elif (type == "CSV"):
-        d = {'device_id':[],
-             'sensor_type':[],
-             'value':[]}
-        reader = csv.DictReader(data.decode("utf-8").splitlines())        
-        for row in reader:
-            for key in row:
-                d[key].append(row[key])        
-        return d
+# parallel programming lib 
+import threading
+        
+def step1():
+    conn.request("POST", "")
+    main_response = conn.getresponse()
     
-    return "not relevant"
+    #print (response.status, response.reason)
+    urls = literal_eval(main_response.read().decode("utf-8")) #response to dict
+    urls_header = main_response.getheaders() 
+    urls_range = list(range(len(urls)))
+    secret_key = urls_header[2][1]
     
-def save(data,type):
-    if (type == "XML"):
-        for key in data:
-            if key == "@id":
-                OUTPUT["ID"].append([data.get(key)])  
-            if key == "type":
-                OUTPUT["TYPE"].append([data.get(key)])   
-            if key == "value":
-                OUTPUT["VALUE"].append([data.get(key)])  
-
-    elif (type == "JSON"):
-        for key in data:
-            if key == "device_id":
-                OUTPUT["ID"].append([data.get(key)])  
-            if key == "sensor_type":
-                OUTPUT["TYPE"].append([data.get(key)]) 
-            if key == "value":
-                OUTPUT["VALUE"].append([data.get(key)])  
-                
-    elif (type == "CSV"):
-        for key in data:
-            if key == "device_id":
-                OUTPUT["ID"].append(data.get(key))  
-            if key == "sensor_type":
-                OUTPUT["TYPE"].append(data.get(key)) 
-            if key == "value":
-                OUTPUT["VALUE"].append(data.get(key)) 
+    debug_data(urls,urls_header)
     
-def find_value_format(header):
-    for attribute in header:
-        for part in attribute:
-            if "xml" in part:
-                return "XML"
-            if "json" in part:
-                return "JSON"
-            if "csv" in part:
-                return "CSV"
+    secondaryHeader = { "Session" : secret_key }
+    return urls,secondaryHeader,len(urls_range)
 
-no_params = urllib.parse.urlencode({})
-mainHeader = {}
+def debug_data(urls,urls_header):
+    print("\nURLs_Header:")
+    print(urls_header)
+    print("\nURLs_Body:")
+    print(urls)
+    print("\n")
 
-Devices = {
-    '0' : "Temperature sensors",
-    '1' : "Humidity sensors",
-    '2' : "Motion sensors",
-    '3' : "Alien Presence detectors", 
-    '4' : "Dark Matter detectors",
-    '5' : "Top Secret detectors"}
+def step2(urls_count):
+    urls_clean = []
+    for i in range(urls_count):
+        urls_clean.append("http://"+URL+urls[i]["path"])
+    return urls_clean
     
-conn = http.client.HTTPConnection("desolate-ravine-43301.herokuapp.com")
+def fetch_url(url):
+    try:
+        req = r.Request(url,b'',secondaryHeader)
+        result = r.urlopen(req).read().decode("utf-8")
+        process_result(result)
 
-# STEP 1
-conn.request("POST", "", no_params, mainHeader)
-main_response = conn.getresponse()
+#       result_h = r.urlopen(req).info().items() # header
+#       print("result:\n",result)   # for debugging
 
-#print (response.status, response.reason)
-urls = literal_eval(main_response.read().decode("utf-8"))
-urls_header = main_response.getheaders() 
-secret_key = urls_header[2][1]
-
-print("\nURLs_Header:")
-print(urls_header)
-print("\nURLs_Body:")
-print(urls)
-print("\n")
-
-secondaryHeader = { "Session" : secret_key }
-
-
-
-"""     MAKE THIS CODE PARALLEL     """
-"""|||||||||||||||||||||||||||||||||"""
-
-def test():
-    for i in range(len(urls)): 
-        try:
-            conn.request("GET",urls[i]["path"],no_params, secondaryHeader)
-            response = conn.getresponse()
-            
-            h = response.getheaders()
-            raw_data = response.read() 
-            value_format = find_value_format(h)
-            device_body = deserialize(raw_data,value_format)
-            save(device_body, value_format)
-            
-            #print("Device header\n",h)
-            print(i+1,") Device Body\n",device_body)
-            print("ValueFormat: ",value_format,"\n")
-           # while(True):    #forcing a http exception
-            #    response = conn.getresponse()
     
-        except  http.client.HTTPException as e:
-            print("!!! SERVER KEY TIMED OUT!!!")
-            # NEED TO RETURN TO STEP 1
-            return("HTTPException")
+    except  urllib.error.HTTPError as e:
+        print("!!! SERVER KEY TIMED OUT!!!")
+        #step1() #repeat step1
+        print(e)
+        return 0,0
+   
 
-"""|||||||||||||||||||||||||||||||||"""
-test()
-#######################################
+def multiple_requests(urls):
+    threads = [threading.Thread(target=fetch_url, args=(url,)) for url in urls]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
 
-print("output: ",OUTPUT["TYPE"])
-L1 = [item for sublist in OUTPUT["ID"] for item in sublist]
-L2 = [item for sublist in OUTPUT["TYPE"] for item in sublist]
-L3 = [item for sublist in OUTPUT["VALUE"] for item in sublist]
-FINAL = {"ID":L1,"TYPE":L2,"VALUE":L3}
-print("Final:",FINAL)
-print("\n- RESULTS -")
-for i in range(len(Devices)):
-    t=0;
-    print("\n",Devices[str(i)],": ") # group name
-    for j in FINAL["TYPE"]:
-        if j == str(i) or j==i:
-            print("Device-|",FINAL["ID"][t],"|:",FINAL["VALUE"][t])
-        t+=1 
+def process_result(result):
+
+    value_format = utils.guess_value_format(result)
+    device_body = utils.deserialize(result,value_format)
+    utils.save(device_body, value_format)
+    
+    print("HTTP Request successful!")
+    print("Device Body\n",device_body)
+    print("ValueFormat: ",value_format,"\n")   
+    
+    
+URL = "desolate-ravine-43301.herokuapp.com"
+conn = http.client.HTTPConnection(URL)
+
+"""# STEP 1"""
+urls,secondaryHeader,urls_count = step1()
+"""# STEP 2"""
+urls = step2(urls_count)
+"""# STEP 3"""
+multiple_requests(urls)
+
+utils.format_and_reorder_output()    
 conn.close()
 
 
