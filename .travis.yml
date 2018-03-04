@@ -14,5 +14,4 @@ install:
   - pip install -r Lab1-2/requirements/requirements.txt
 # command to run tests
 script: 
-  - py.test --version
   - python Lab1-2/src/test.py
