@@ -5,6 +5,9 @@ import utils
 import http.client
 import urllib,urllib.request as r
 
+# utils
+from ast import literal_eval 
+
 # parallel programming lib 
 import threading
         
