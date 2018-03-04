@@ -5,7 +5,6 @@ python:
   - "3.6"
 before_install:
   - pip install pytest-cov
-  - python Lab1-2/src/test.py
 # environment variables
 env:
   - IPYTHON=4.2.0
@@ -14,4 +13,6 @@ install:
   - pip install -q ipython==$IPYTHON
   - pip install -r Lab1-2/requirements/requirements.txt
 # command to run tests
-script: py.test --version
+script: 
+  - py.test --version
+  - python Lab1-2/src/test.py
