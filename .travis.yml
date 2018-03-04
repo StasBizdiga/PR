@@ -7,6 +7,6 @@ env:
 # command to install dependencies
 install:
   - pip install -q ipython==$IPYTHON
-  - pip install -r requirements/requirements.txt
+  - pip install -r Lab1/requirements/requirements.txt
 # command to run tests
 script: test
