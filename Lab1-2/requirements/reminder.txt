@@ -2,7 +2,15 @@ testing:
 python manage.py migrate
 python manage.py runserver
 //////////////////////////
-sources:
+
+CREATING Requirements.txt:
+--------------------------
+pip install pipreqs 
+pipreqs /path/to/project
+...
+[generating /path/to/project/requirements.txt]
+
+online sources:
 https://medium.com/@bfortuner/python-multithreading-vs-multiprocessing-73072ce5600b
 http://skipperkongen.dk/2016/09/09/easy-parallel-http-requests-with-python-and-asyncio/
 https://docs.python.org/2/library/threading.html
