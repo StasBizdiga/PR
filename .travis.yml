@@ -3,15 +3,12 @@ notifications:
   email: false
 python:
   - "3.6"
-before_install:
-  - pip install pytest-cov
 # environment variables
 env:
-  - IPYTHON=4.2.0
+   system_site_packages: true
 # command to install dependencies
 install:
-  - pip install -q ipython==$IPYTHON
-  - pip install -r Lab1-2/requirements/requirements.txt
+  - pip install -r -q Lab1-2/requirements/requirements.txt
 # command to run tests
 script: 
   - python Lab1-2/src/test.py
