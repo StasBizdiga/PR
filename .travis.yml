@@ -8,7 +8,7 @@ env:
    system_site_packages: true
 # command to install dependencies
 install:
-  - pip install -r -q Lab1-2/requirements/requirements.txt
+  - pip install -r Lab1-2/requirements/requirements.txt
 # command to run tests
 script: 
   - python Lab1-2/src/test.py
