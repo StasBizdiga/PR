@@ -5,81 +5,66 @@ import utils
 import http.client
 import urllib,urllib.request as r
 
+
 # utils
 import time
 from ast import literal_eval 
 
-# parallel programming lib 
-import threading
+# parallel programming libs
+import threading as t
         
-def step1(is_viewable):
-    conn.request("POST", "")
-    main_response = conn.getresponse()
-    
-    #print (response.status, response.reason)
-    urls = literal_eval(main_response.read().decode("utf-8")) #response to dict
-    urls_header = main_response.getheaders() 
-    urls_range = list(range(len(urls)))
-    secret_key = urls_header[2][1]
-   
-    if(is_viewable):
-        debug_data(urls,urls_header)
-    
-    secondaryHeader = { "Session" : secret_key }
-    return urls,secondaryHeader,len(urls_range)
-
-def debug_data(urls,urls_header):
-    print("\nURLs_Header:")
-    print(urls_header)
-    print("\nURLs_Body:")
-    print(urls)
-    print("\n")
-
-def step2(urls_count):
-    urls_clean = []
-    for i in range(urls_count):
-        urls_clean.append("http://"+URL+urls[i]["path"])
-    return urls_clean
-    
-def fetch_url(url):
-    
-    #print("HTTP Response sent!")
-    try:        
-        s1 = time.time()
-
-        req = r.Request(url,b'',secondaryHeader)
-        result = r.urlopen(req).read().decode("utf-8")
-        process_result(result)
-        
-        e1 = time.time()
-        
-        
-        print("Response time:",e1 - s1)
-#       result_h = r.urlopen(req).info().items() # header
-#       print("result:\n",result)   # for debugging
-        start_over = False
-    
-    except  urllib.error.HTTPError as e:
-        print("\n!!! SERVER KEY TIMED OUT!!!")
-        print(e)
-        
-        e1 = time.time()
-        print("FAILED Response time:",e1 - s1)
-        
-        start_over = True
-        
-        return 0,0
-
-def parallel_requests(urls):
-    threads = [threading.Thread(target=fetch_url, args=(url,)) for url in urls]
+def parallel_t_requests(urls):
+    threads = [t.Thread(target=fetch_url, args=(url,)) for url in urls]
     for thread in threads:
         thread.start()
     for thread in threads:
-        thread.join()
+        thread.join()        
+        
+def main_request(debug_mode):
+    conn.request("POST", "")
+    main_response = conn.getresponse()
+    
+    """http.response (byte) to string, then to dict:"""
+    urls_body = literal_eval(main_response.read().decode("utf-8")) 
+    urls_header = main_response.getheaders() 
+    urls_count = len(urls_body)
+    secret_key = urls_header[2][1]
+   
+    if(debug_mode):
+        utils.debug_data(urls_body,urls_header)
+    
+    secret_key_header = { "Session" : secret_key }
+    return urls_body,secret_key_header,urls_count
 
 
-#def linear_requests(urls):
-#    [fetch_url(url) for url in urls]
+def refactor_urls(urls_count,urls_body,URL):
+    urls_clean = []
+    for i in range(urls_count):
+        urls_clean.append("http://"+URL+urls_body[i]["path"])
+    return urls_clean
+    
+def fetch_url(url):
+    #print("HTTP request sent!")
+    try:
+        s1 = time.time() 
+#----------------------------
+        req = r.Request(url,b'',secret_key_header)
+        result = r.urlopen(req).read().decode("utf-8")
+#        result_h = r.urlopen(req).info().items() # header, if required
+        process_result(result)
+#----------------------------        
+        e1 = time.time()
+        
+        print("Response time:",e1 - s1)
+
+    
+    except urllib.error.HTTPError as e:
+        print("\n!!! SERVER KEY TIMED OUT!!!")
+        print("Or perhaps:",e)
+        e1 = time.time() #time when the failed request would've finished
+        print("FAILED Response time:",e1 - s1)        
+        retrying = True
+    
 
 def process_result(result):
 
@@ -87,30 +72,27 @@ def process_result(result):
     device_body = utils.deserialize(result,value_format)
     utils.save(device_body, value_format)
     
-    print("\nHTTP Response successful!")
-    print("Device Body\n",device_body)
-    print("ValueFormat: ",value_format)   
+    print("\nHTTP Response successful!") #debug
+    print("Device Body\n",device_body)   #debug
+    print("ValueFormat: ",value_format)  #debug
 
 
 URL = "desolate-ravine-43301.herokuapp.com"
 conn = http.client.HTTPConnection(URL)
-start_over = True
-
-while(start_over):
+retrying = True #only first time
+while(retrying):
+    
     """# STEP 1"""
-    urls,secondaryHeader,urls_count = step1(True)
+    urls_body,secret_key_header,urls_count = main_request(True)
     """# STEP 2"""
-    urls = step2(urls_count)
+    urls = refactor_urls(urls_count,urls_body,URL)
     """# STEP 3"""
-    parallel_requests(urls)
-    #linear_requests(urls)
-    io = input("\nRetry? (y/n):")
-    if (io=="y"):
-        start_over = True
-        print("\n!--- R E T R Y I N G ---!\n")
-    else:
-        start_over = False    
-
+    retrying = False #job considered complete...
+    parallel_t_requests(urls)    
+    if(retrying): #...unless an error requests a retry
+        print("\n!!! RETRYING !!!")
+    
+    
 """# STEP omega"""
 utils.format_and_reorder_output()    
 conn.close()

@@ -83,18 +83,27 @@ def guess_value_format(data):
                 return "CSV"
     return None
                 
+def debug_data(urls_body,urls_header):
+    print("\nURLs_Header:")
+    print(urls_header)
+    print("\nURLs_Body:")
+    print(urls_body)
+    print("\n")
+    
 def format_and_reorder_output():
-    #print("output: ",OUTPUT["TYPE"]) #debug
+    #Collecting raw data (list with lists)
     L1 = [item for sublist in OUTPUT["ID"] for item in sublist]
     L2 = [item for sublist in OUTPUT["TYPE"] for item in sublist]
     L3 = [item for sublist in OUTPUT["VALUE"] for item in sublist]
+    
+    #Storing collected data into a dict
     FINAL = {"ID":L1,"TYPE":L2,"VALUE":L3}
-#    print("Final:",FINAL)
+    
     print("\n- RESULTS -")
     for i in range(len(Devices)):
         t=0;
-        print("\n",Devices[str(i)],": ") # group name
+        print("\n",Devices[str(i)],": ") #device name
         for j in FINAL["TYPE"]:
-            if j == str(i) or j==i:
+            if j == str(i) or j==i: #ordering data by device type
                 print("Device-|",FINAL["ID"][t],"|:",FINAL["VALUE"][t])
             t+=1 
