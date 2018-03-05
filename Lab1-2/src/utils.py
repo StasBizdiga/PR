@@ -14,18 +14,18 @@ Devices = {
     '4' : "Dark Matter detectors",
     '5' : "Top Secret detectors"}
     
-def deserialize(data, type):
-    if (type == "JSON"):
-        return literal_eval(data)
+def deserialize(response, type):
+    if (type == "Application/json"):
+        return response.json()
 
-    elif (type == "XML"):
-        return xmltodict.parse(data)["device"]
+    elif (type == "Application/xml"):
+        return xmltodict.parse(response.text)["device"]
 
-    elif (type == "CSV"):
+    elif (type == "text/csv"):
         d = {'device_id':[],
              'sensor_type':[],
              'value':[]}
-        reader = csv.DictReader(data.splitlines())        
+        reader = csv.DictReader(response.text.splitlines())        
         for row in reader:
             for key in row:
                 d[key].append(row[key])        
@@ -33,8 +33,8 @@ def deserialize(data, type):
     
     return "not relevant"
     
-def save(data,type):
-    if (type == "XML"):
+def save_data(data,type):
+    if (type == "Application/xml"):
         for key in data:
             if key == "@id":
                 OUTPUT["ID"].append([data.get(key)])  
@@ -43,7 +43,7 @@ def save(data,type):
             if key == "value":
                 OUTPUT["VALUE"].append([data.get(key)])  
 
-    elif (type == "JSON"):
+    elif (type == "Application/json"):
         for key in data:
             if key == "device_id":
                 OUTPUT["ID"].append([data.get(key)])  
@@ -52,7 +52,7 @@ def save(data,type):
             if key == "value":
                 OUTPUT["VALUE"].append([data.get(key)])  
                 
-    elif (type == "CSV"):
+    elif (type == "text/csv"):
         for key in data:
             if key == "device_id":
                 OUTPUT["ID"].append(data.get(key))  
@@ -60,28 +60,6 @@ def save(data,type):
                 OUTPUT["TYPE"].append(data.get(key)) 
             if key == "value":
                 OUTPUT["VALUE"].append(data.get(key)) 
-    
-def find_value_format(header):
-    for attribute in header:
-        for part in attribute:
-            if "xml" in part:
-                return "XML"
-            if "json" in part:
-                return "JSON"
-            if "csv" in part:
-                return "CSV"
-    return None
-    
-def guess_value_format(data):
-    for attribute in data:
-        for part in attribute:
-            if "<" in part:
-                return "XML"
-            if "{" in part:
-                return "JSON"
-            if "," in part:
-                return "CSV"
-    return None
                 
 def debug_data(urls_body,urls_header):
     print("\nURLs_Header:")

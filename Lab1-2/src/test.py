@@ -3,12 +3,11 @@ import utils
 
 # networking libs
 import http.client
-import urllib,urllib.request as r
-
+import urllib
+import requests
 
 # utils
 import time
-from ast import literal_eval 
 
 # parallel programming libs
 import threading as t
@@ -21,14 +20,12 @@ def parallel_t_requests(urls):
         thread.join()        
         
 def main_request(debug_mode):
-    conn.request("POST", "")
-    main_response = conn.getresponse()
+    main_response = requests.post(URL)
     
-    """http.response (byte) to string, then to dict:"""
-    urls_body = literal_eval(main_response.read().decode("utf-8")) 
-    urls_header = main_response.getheaders() 
+    urls_body = main_response.json() 
+    urls_header = main_response.headers        
     urls_count = len(urls_body)
-    secret_key = urls_header[2][1]
+    secret_key = urls_header['Session']
    
     if(debug_mode):
         utils.debug_data(urls_body,urls_header)
@@ -38,19 +35,14 @@ def main_request(debug_mode):
 
 
 def refactor_urls(urls_count,urls_body,URL):
-    urls_clean = []
-    for i in range(urls_count):
-        urls_clean.append("http://"+URL+urls_body[i]["path"])
-    return urls_clean
+    return [(URL+urls_body[i]["path"]) for i in range(urls_count)]    
     
 def fetch_url(url):
     #print("HTTP request sent!")
     try:
         s1 = time.time() 
 #----------------------------
-        req = r.Request(url,b'',secret_key_header)
-        result = r.urlopen(req).read().decode("utf-8")
-#        result_h = r.urlopen(req).info().items() # header, if required
+        result = requests.get(url, headers=secret_key_header)        
         process_result(result)
 #----------------------------        
         e1 = time.time()
@@ -68,18 +60,20 @@ def fetch_url(url):
 
 def process_result(result):
 
-    value_format = utils.guess_value_format(result)
+    value_format = result.headers['Content-Type']
     device_body = utils.deserialize(result,value_format)
-    utils.save(device_body, value_format)
+    utils.save_data(device_body, value_format)
     
     print("\nHTTP Response successful!") #debug
-    print("Device Body\n",device_body)   #debug
-    print("ValueFormat: ",value_format)  #debug
+    #print("Device Body:",result.text)   #debug
+    #print("ValueFormat: ",value_format)  #debug
 
 
-URL = "desolate-ravine-43301.herokuapp.com"
-conn = http.client.HTTPConnection(URL)
-retrying = True #only first time
+URL_RAW = "desolate-ravine-43301.herokuapp.com"
+conn = http.client.HTTPConnection(URL_RAW)
+URL = "http://" + URL_RAW
+
+retrying = True # only once
 while(retrying):
     
     """# STEP 1"""
@@ -88,10 +82,9 @@ while(retrying):
     urls = refactor_urls(urls_count,urls_body,URL)
     """# STEP 3"""
     retrying = False #job considered complete...
-    parallel_t_requests(urls)    
+    parallel_t_requests(urls)
     if(retrying): #...unless an error requests a retry
         print("\n!!! RETRYING !!!")
-    
     
 """# STEP omega"""
 utils.format_and_reorder_output()    
