@@ -1,5 +1,4 @@
 #parsing libraries
-from ast import literal_eval  
 import xmltodict
 import csv
 

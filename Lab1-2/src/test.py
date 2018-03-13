@@ -19,6 +19,12 @@ def parallel_t_requests(urls):
     for thread in threads:
         thread.join()        
         
+        
+""" Global Variables:"""
+#URL_RAW = "desolate-ravine-43301.herokuapp.com"
+#conn = http.client.HTTPConnection(URL_RAW)
+URL = "http://desolate-ravine-43301.herokuapp.com"    
+
 def main_request(debug_mode):
     main_response = requests.post(URL)
     
@@ -68,12 +74,8 @@ def process_result(result):
     #print("Device Body:",result.text)   #debug
     #print("ValueFormat: ",value_format)  #debug
 
-
-URL_RAW = "desolate-ravine-43301.herokuapp.com"
-conn = http.client.HTTPConnection(URL_RAW)
-URL = "http://" + URL_RAW
-
-retrying = True # only once
+"""#####################START#####################"""
+retrying = True # only once   
 while(retrying):
     
     """# STEP 1"""
@@ -87,7 +89,6 @@ while(retrying):
         print("\n!!! RETRYING !!!")
     
 """# STEP omega"""
-utils.format_and_reorder_output()    
-conn.close()
+utils.format_and_reorder_output()  
 
 
